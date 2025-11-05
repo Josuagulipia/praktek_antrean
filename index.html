@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Permainan Antrean (Queue) — Visual Interaktif</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --card: #ffffff;
+        --accent: #0f62fe;
+        --muted: #6b7280;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: Inter, system-ui, Segoe UI, Roboto, Arial;
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(180deg, var(--bg), #eef3ff);
+        color: #111;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 28px auto;
+        padding: 22px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+      p.lead {
+        margin: 6px 0 18px;
+        color: var(--muted);
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 18px;
+      }
+      .card {
+        background: var(--card);
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(16, 24, 40, 0.06);
+      }
+
+      /* queue row */
+      .queue-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 10px;
+        background: #f8fafc;
+        border: 1px dashed #e6eef9;
+        min-height: 86px;
+      }
+      .spot {
+        min-width: 56px;
+        min-height: 56px;
+        border-radius: 8px;
+        background: #fff;
+        border: 2px solid transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+      }
+      .spot.empty {
+        background: transparent;
+        border: 2px dashed #dbeafe;
+        color: #94a3b8;
+        font-weight: 600;
+      }
+
+      .controls {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      input[type="text"] {
+        flex: 1;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #e6eef9;
+      }
+      button {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 0;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #fff;
+        color: var(--accent);
+        border: 1px solid #dbeafe;
+      }
+      button.danger {
+        background: #ef4444;
+      }
+
+      .log {
+        max-height: 200px;
+        overflow: auto;
+        margin-top: 8px;
+        padding: 8px;
+        background: #0f172a0a;
+        border-radius: 8px;
+        font-size: 13px;
+        color: #0f172a;
+      }
+
+      .explain {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      /* animations */
+      .spot {
+        transition: transform 0.35s ease, box-shadow 0.25s ease;
+      }
+      .spot.enqueue {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 8px 20px rgba(15, 98, 254, 0.12);
+      }
+      .spot.dequeue {
+        transform: translateY(10px) scale(0.98);
+        opacity: 0;
+      }
+
+      /* responsive */
+      @media (max-width: 860px) {
+        .board {
+          grid-template-columns: 1fr;
+        }
+        .controls {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        .card {
+          padding: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <div
+          style="
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #dbeafe, #60a5fa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #052c65;
+            font-weight: 800;
+          "
+        >
+          Q
+        </div>
+        <div>
+          <h1>Permainan Antrean (Queue) — Visual Interaktif</h1>
+          <p class="lead">
+            Simulasikan operasi <strong>Enqueue</strong> dan
+            <strong>Dequeue</strong> pada antrean (FIFO). Cocok untuk
+            demonstrasi kelas.
+          </p>
+        </div>
+      </header>
+
+      <main class="board" style="margin-top: 18px">
+        <section class="card">
+          <h3>Antrean</h3>
+          <div class="queue-row" id="queueRow" aria-live="polite" role="list">
+            <!-- spots populated by JS -->
+          </div>
+
+          <div class="explain">
+            <strong>Depan</strong> → kotak sebelah kiri adalah yang dilayani
+            pertama. <strong>Belakang</strong> → kotak paling kanan tempat
+            pemain baru bergabung.
+          </div>
+
+          <div
+            style="
+              margin-top: 12px;
+              display: flex;
+              gap: 10px;
+              align-items: center;
+              flex-wrap: wrap;
+            "
+          >
+            <button class="secondary" id="btnPeek">Peek (Lihat Depan)</button>
+            <button id="btnDequeue" class="danger">Dequeue (Layani)</button>
+            <button id="btnClear" class="secondary">Bersihkan</button>
+          </div>
+
+          <div class="log" id="log" aria-live="polite" style="margin-top: 12px">
+            Log aktivitas akan muncul di sini.
+          </div>
+        </section>
+
+        <aside class="card">
+          <h3>Kontrol</h3>
+          <div class="controls">
+            <div class="row">
+              <input
+                id="nameInput"
+                type="text"
+                placeholder="Masukkan nama (mis. A)"
+                aria-label="Nama"
+              />
+              <button id="btnEnqueue">Enqueue</button>
+            </div>
+
+            <div style="font-size: 13px; color: var(--muted); margin-top: 6px">
+              Panjang antrean maksimum: <strong id="maxLen">8</strong>
+            </div>
+
+            <div style="margin-top: 12px">
+              <h4>Instruksi singkat</h4>
+              <ol
+                style="padding-left: 18px; color: var(--muted); font-size: 14px"
+              >
+                <li>
+                  Klik <em>Enqueue</em> untuk menambahkan pemain di belakang
+                  antrean.
+                </li>
+                <li>
+                  Klik <em>Dequeue</em> untuk melayani pemain di depan antrean.
+                </li>
+                <li>
+                  Gunakan <em>Peek</em> untuk melihat siapa yang di depan tanpa
+                  menghapusnya.
+                </li>
+              </ol>
+            </div>
+
+            <div style="margin-top: 12px">
+              <label style="font-size: 13px; color: var(--muted)"
+                >Contoh awal:</label
+              >
+              <div
+                style="
+                  margin-top: 6px;
+                  display: flex;
+                  gap: 6px;
+                  flex-wrap: wrap;
+                "
+              >
+                <button
+                  class="secondary"
+                  onclick="loadExample(['A','B','C','D','E'])"
+                >
+                  A,B,C,D,E
+                </button>
+                <button class="secondary" onclick="loadExample(['J','K'])">
+                  J,K
+                </button>
+                <button class="secondary" onclick="loadExample([])">
+                  Kosong
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <hr
+            style="margin: 12px 0; border: none; border-top: 1px solid #eef3ff"
+          />
+          <h4>Petunjuk Guru</h4>
+          <p style="font-size: 13px; color: var(--muted)">
+            Gunakan ini untuk demonstrasi: minta siswa menekan Enqueue/Dequeue
+            dan jelaskan konsep FIFO serta penggunaannya di komputer (antrian
+            proses, antrian cetak, buffer I/O).
+          </p>
+        </aside>
+      </main>
+    </div>
+
+    <script>
+      // Simple queue visualizer
+      (function () {
+        const max = 8;
+        const queue = [];
+        const queueRow = document.getElementById("queueRow");
+        const logEl = document.getElementById("log");
+        const nameInput = document.getElementById("nameInput");
+        const btnEnq = document.getElementById("btnEnqueue");
+        const btnDeq = document.getElementById("btnDequeue");
+        const btnPeek = document.getElementById("btnPeek");
+        const btnClear = document.getElementById("btnClear");
+        document.getElementById("maxLen").textContent = max;
+
+        function render() {
+          queueRow.innerHTML = "";
+          // show from front (left) to back (right)
+          for (let i = 0; i < max; i++) {
+            const spot = document.createElement("div");
+            spot.className = "spot";
+            if (i < queue.length) {
+              spot.textContent = queue[i];
+              spot.setAttribute("role", "listitem");
+              // mark front/back
+              if (i === 0) spot.title = "Depan (akan dilayani)";
+              if (i === queue.length - 1)
+                spot.title = "Belakang (tempat bergabung)";
+            } else {
+              spot.classList.add("empty");
+              spot.textContent = "+";
+              spot.title = "Kosong";
+            }
+            queueRow.appendChild(spot);
+          }
+        }
+
+        function log(msg) {
+          const now = new Date();
+          const t = now.toLocaleTimeString("id-ID");
+          logEl.innerHTML = `<div>[${t}] ${msg}</div>` + logEl.innerHTML;
+        }
+
+        function enqueue(name) {
+          if (!name) {
+            alert("Masukkan nama pemain/label.");
+            return;
+          }
+          if (queue.length >= max) {
+            alert("Antrean penuh!");
+            return;
+          }
+          queue.push(name);
+          render();
+          // animate last spot briefly
+          const spots = queueRow.querySelectorAll(".spot");
+          const last = spots[queue.length - 1];
+          last.classList.add("enqueue");
+          setTimeout(() => last.classList.remove("enqueue"), 400);
+          log(`Enqueue: ${name} masuk ke belakang.`);
+        }
+
+        function dequeue() {
+          if (queue.length === 0) {
+            alert("Antrean kosong.");
+            return;
+          }
+          const removed = queue.shift();
+          // animate first spot
+          render();
+          const spots = queueRow.querySelectorAll(".spot");
+          const first = spots[0];
+          first.classList.add("dequeue");
+          setTimeout(() => first.classList.remove("dequeue"), 350);
+          log(`Dequeue: ${removed} dilayani dan keluar dari antrean.`);
+        }
+
+        function peek() {
+          if (queue.length === 0) {
+            alert("Antrean kosong.");
+            return;
+          }
+          alert("Di depan antrean: " + queue[0]);
+          log(`Peek: melihat ${queue[0]} di depan tanpa menghapus.`);
+        }
+
+        function clearQueue() {
+          if (!confirm("Bersihkan seluruh antrean?")) return;
+          queue.length = 0;
+          render();
+          log("Antrean dibersihkan.");
+        }
+
+        window.loadExample = function (arr) {
+          queue.length = 0;
+          for (const v of arr) queue.push(v);
+          render();
+          log("Contoh dimuat: " + (arr.length ? arr.join(", ") : "Kosong"));
+        };
+
+        btnEnq.addEventListener("click", () => {
+          const name = nameInput.value.trim() || undefined;
+          enqueue(name);
+          nameInput.value = "";
+          nameInput.focus();
+        });
+        nameInput.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") btnEnq.click();
+        });
+        btnDeq.addEventListener("click", dequeue);
+        btnPeek.addEventListener("click", peek);
+        btnClear.addEventListener("click", clearQueue);
+
+        // initial example
+        loadExample(["A", "B", "C", "D", "E"]);
+      })();
+    </script>
+  </body>
+</html>
